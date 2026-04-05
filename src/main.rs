@@ -1,0 +1,53 @@
+use std::{
+    error::Error,
+    io::{BufRead, BufReader, Write, stdin, stdout},
+    path::Path,
+};
+
+use crate::{error::{had_error, reset_error}};
+
+mod lexer;
+mod error;
+
+fn main() -> Result<(), Box<dyn Error>> {
+    let mut args = std::env::args().skip(1);
+    if args.len() > 1 {
+        eprintln!("Usage: rlox [SCRIPT]");
+        std::process::exit(64);
+    } else if args.len() == 1 {
+        run_file(Path::new(&args.next().unwrap()))?;
+    } else {
+        run_prompt()?;
+    }
+    Ok(())
+}
+
+fn run_file(path: &Path) -> Result<(), Box<dyn Error>> {
+    run(&std::fs::read_to_string(path)?);
+    if had_error() {
+        std::process::exit(65);
+    }
+    Ok(())
+}
+
+fn run_prompt() -> Result<(), Box<dyn Error>> {
+    let input = stdin();
+    let mut input = BufReader::new(input);
+    loop {
+        print!("> ");
+        stdout().flush().unwrap();
+        let mut line = String::new();
+        input.read_line(&mut line).unwrap();
+        run(&line)?;
+        reset_error();
+    }
+}
+
+fn run(line: &str) -> Result<(), Box<dyn Error>> {
+    let tokens = scan_token(line);
+    for token in tokens {
+        println!("{token}");
+    }
+    Ok(())
+}
+
