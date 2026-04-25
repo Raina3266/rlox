@@ -1,3 +1,5 @@
+use std::{collections::HashMap, sync::LazyLock};
+
 use crate::error::error;
 
 #[derive(Debug, Clone)]
@@ -8,7 +10,7 @@ pub struct Token {
     line: usize,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 enum TokenType {
     // Single-char
     LeftParen,
@@ -37,23 +39,24 @@ enum TokenType {
     Identifier,
     String,
     Number,
+
     // Keywords
-    // And,
-    // Class,
-    // Else,
-    // True,
-    // False,
-    // Fun,
-    // For,
-    // If,
-    // Nil,
-    // Or,
-    // Print,
-    // Return,
-    // Super,
-    // This,
-    // Var,
-    // While,
+    And,
+    Class,
+    Else,
+    True,
+    False,
+    Fun,
+    For,
+    If,
+    Nil,
+    Or,
+    Print,
+    Return,
+    Super,
+    This,
+    Var,
+    While,
     Eof,
 }
 
@@ -149,8 +152,14 @@ impl Scanner {
                 self.line += 1;
             }
             '"' => self.string_literal(),
-
-            _ => { if {} else {error(self.line, "Unexpected character.".to_string())}},
+            '0'..='9' => self.number(),
+            c => {
+                if c.is_ascii() {
+                    self.identifier();
+                } else {
+                    error(self.line, "Unexpected character.".to_string())
+                }
+            }
         };
     }
 
@@ -197,6 +206,13 @@ impl Scanner {
         Some(self.source[self.current])
     }
 
+    fn peek_next(&self) -> Option<char> {
+        if self.current + 1 >= self.source.len() {
+            return None;
+        }
+        Some(self.source[self.current + 1])
+    }
+
     fn string_literal(&mut self) {
         while self.peek() != Some('"') && !self.is_at_end() {
             // allow multilines in string literal
@@ -209,10 +225,67 @@ impl Scanner {
             error(self.line, "Unterminated string.".to_string());
             return;
         }
-        let value: String = self.source[self.start + 1..self.current]
-            .iter()
-            .collect();
+        let value: String = self.source[self.start + 1..self.current].iter().collect();
         self.add_token_with_literal(TokenType::String, Some(Literal::String(value)));
         self.advance();
     }
+
+    fn number(&mut self) {
+        while self.peek().is_some_and(|c| c.is_ascii_digit()) {
+            self.advance();
+        }
+
+        if self.peek().is_some_and(|c| c == '.')
+            && self.peek_next().is_some_and(|c| c.is_ascii_digit())
+        {
+            self.advance();
+            while self.peek().is_some_and(|c| c.is_ascii_digit()) {
+                self.advance();
+            }
+        }
+        let value: String = self.source[self.start..self.current].iter().collect();
+        let Ok(number) = value.parse::<f64>() else {
+            error(self.line, "Unterminated number.".to_string());
+            return;
+        };
+        self.add_token_with_literal(TokenType::Number, Some(Literal::Number(number)));
+        self.advance();
+    }
+    fn identifier(&mut self) {
+        while self
+            .peek()
+            .is_some_and(|c| c.is_ascii() && c.is_ascii_digit())
+        {
+            self.advance();
+        }
+
+        let value: String = self.source[self.start..self.current].iter().collect();
+        if let Some(keyword) = KEYWORD_MAP.get(value.as_str()) {
+            self.add_token_with_literal(*keyword, None);
+        } else {
+            self.add_token_with_literal(TokenType::Identifier, None);
+        }
+    }
 }
+
+static KEYWORD_MAP: LazyLock<HashMap<&'static str, TokenType>> = LazyLock::new(|| {
+    let mut map = HashMap::new();
+
+    map.insert("and", TokenType::And);
+    map.insert("class", TokenType::Class);
+    map.insert("else", TokenType::Else);
+    map.insert("false", TokenType::False);
+    map.insert("for", TokenType::For);
+    map.insert("fun", TokenType::Fun);
+    map.insert("if", TokenType::If);
+    map.insert("nil", TokenType::Nil);
+    map.insert("or", TokenType::Or);
+    map.insert("print", TokenType::Print);
+    map.insert("return", TokenType::Return);
+    map.insert("super", TokenType::Super);
+    map.insert("this", TokenType::This);
+    map.insert("true", TokenType::True);
+    map.insert("var", TokenType::Var);
+    map.insert("while", TokenType::While);
+    map
+});
