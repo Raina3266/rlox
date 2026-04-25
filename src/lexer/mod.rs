@@ -1,5 +1,6 @@
-use std::str::Chars;
+use crate::error::error;
 
+#[derive(Debug, Clone)]
 pub struct Token {
     token_type: TokenType,
     lexeme: String,
@@ -7,6 +8,7 @@ pub struct Token {
     line: usize,
 }
 
+#[derive(Debug, Clone)]
 enum TokenType {
     // Single-char
     LeftParen,
@@ -22,15 +24,19 @@ enum TokenType {
     Star,
 
     // One or Two char
-    // Bang,
-    // BangEqual,
-    // Equal,
-    // EqualEqual,
-    // Greater,
-    // GreaterEqual,
-    // Less,
-    // LessEqual,
+    Bang,
+    BangEqual,
+    Equal,
+    EqualEqual,
+    Greater,
+    GreaterEqual,
+    Less,
+    LessEqual,
 
+    // Literals
+    Identifier,
+    String,
+    Number,
     // Keywords
     // And,
     // Class,
@@ -48,19 +54,17 @@ enum TokenType {
     // This,
     // Var,
     // While,
-
     Eof,
 }
 
-
-
+#[derive(Debug, Clone)]
 enum Literal {
     Bool(bool),
     Number(f64),
     String(String),
 }
 
-struct Scanner {
+pub struct Scanner {
     source: Vec<char>,
     tokens: Vec<Token>,
     start: usize,
@@ -69,7 +73,7 @@ struct Scanner {
 }
 
 impl Scanner {
-    fn new(source: &str) -> Self {
+    pub fn new(source: &str) -> Self {
         let tokens = vec![];
         Scanner {
             source: source.chars().collect(),
@@ -80,10 +84,10 @@ impl Scanner {
         }
     }
 
-    fn scan_tokens(&mut self) {
+    pub fn scan_tokens(&mut self) -> Vec<Token> {
         while !self.is_at_end() {
             self.start = self.current;
-            self.scan_tokens();
+            self.scan_token();
         }
         let end_of_file = Token {
             token_type: TokenType::Eof,
@@ -92,9 +96,10 @@ impl Scanner {
             line: self.line,
         };
         self.tokens.push(end_of_file);
+        self.tokens.clone()
     }
 
-    fn scan_token(&mut self) {
+    pub fn scan_token(&mut self) {
         match self.advance() {
             '(' => self.add_token(TokenType::LeftParen),
             ')' => self.add_token(TokenType::RightParen),
@@ -106,13 +111,47 @@ impl Scanner {
             '+' => self.add_token(TokenType::Plus),
             ';' => self.add_token(TokenType::Semicolon),
             '*' => self.add_token(TokenType::Star),
-            _ => {},
-        };
-    }
+            '!' => {
+                if self.advance_if_equal('=') {
+                    self.add_token(TokenType::BangEqual)
+                }
+                self.add_token(TokenType::Bang);
+            }
+            '=' => {
+                if self.advance_if_equal('=') {
+                    self.add_token(TokenType::EqualEqual)
+                }
+                self.add_token(TokenType::Equal);
+            }
+            '<' => {
+                if self.advance_if_equal('=') {
+                    self.add_token(TokenType::LessEqual)
+                }
+                self.add_token(TokenType::Less);
+            }
+            '>' => {
+                if self.advance_if_equal('=') {
+                    self.add_token(TokenType::GreaterEqual)
+                }
+                self.add_token(TokenType::Greater);
+            }
+            '/' => {
+                if self.advance_if_equal('/') {
+                    while self.peek() != Some('\n') && !self.is_at_end() {
+                        self.advance();
+                    }
+                } else {
+                    self.add_token(TokenType::Slash);
+                }
+            }
+            ' ' | '\r' | '\t' => {}
+            '\n' => {
+                self.line += 1;
+            }
+            '"' => self.string_literal(),
 
-    fn advance(&mut self) -> char {
-        self.current += 1;
-        return self.source[self.current - 1];
+            _ => { if {} else {error(self.line, "Unexpected character.".to_string())}},
+        };
     }
 
     fn add_token(&mut self, token_type: TokenType) {
@@ -121,10 +160,59 @@ impl Scanner {
 
     fn add_token_with_literal(&mut self, token_type: TokenType, literal: Option<Literal>) {
         let chars = &self.source[self.start..self.current];
-        self.tokens.push(Token { token_type, lexeme: chars.iter().collect(), literal, line: self.line });
+        self.tokens.push(Token {
+            token_type,
+            lexeme: chars.iter().collect(),
+            literal,
+            line: self.line,
+        });
     }
 
     fn is_at_end(&self) -> bool {
         self.current > self.source.len()
+    }
+
+    fn advance(&mut self) -> char {
+        let c = self.source[self.current];
+        self.current += 1;
+        c
+    }
+
+    fn advance_if_equal(&mut self, expected: char) -> bool {
+        if self.is_at_end() {
+            return false;
+        }
+        if self.source[self.current] != expected {
+            return false;
+        }
+
+        self.current += 1;
+        true
+    }
+
+    fn peek(&self) -> Option<char> {
+        if self.is_at_end() {
+            return None;
+        }
+        Some(self.source[self.current])
+    }
+
+    fn string_literal(&mut self) {
+        while self.peek() != Some('"') && !self.is_at_end() {
+            // allow multilines in string literal
+            if self.peek() == Some('\n') {
+                self.line += 1;
+            }
+            self.advance();
+        }
+        if self.is_at_end() {
+            error(self.line, "Unterminated string.".to_string());
+            return;
+        }
+        let value: String = self.source[self.start + 1..self.current]
+            .iter()
+            .collect();
+        self.add_token_with_literal(TokenType::String, Some(Literal::String(value)));
+        self.advance();
     }
 }

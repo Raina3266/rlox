@@ -4,7 +4,7 @@ use std::{
     path::Path,
 };
 
-use crate::{error::{had_error, reset_error}};
+use crate::{error::{had_error, reset_error}, lexer::Scanner};
 
 mod lexer;
 mod error;
@@ -44,9 +44,10 @@ fn run_prompt() -> Result<(), Box<dyn Error>> {
 }
 
 fn run(line: &str) -> Result<(), Box<dyn Error>> {
-    let tokens = scan_token(line);
+    let mut scanner = Scanner::new(line);
+    let tokens = scanner.scan_tokens();
     for token in tokens {
-        println!("{token}");
+        println!("{token:?}");
     }
     Ok(())
 }
