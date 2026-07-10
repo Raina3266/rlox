@@ -110,7 +110,7 @@ impl Scanner {
             '}' => self.add_token(TokenType::RightBrace),
             ',' => self.add_token(TokenType::Comma),
             '.' => self.add_token(TokenType::Dot),
-            '-' => self.add_token(TokenType::Slash),
+            '-' => self.add_token(TokenType::Minus),
             '+' => self.add_token(TokenType::Plus),
             ';' => self.add_token(TokenType::Semicolon),
             '*' => self.add_token(TokenType::Star),
@@ -251,6 +251,7 @@ impl Scanner {
         self.add_token_with_literal(TokenType::Number, Some(Literal::Number(number)));
         self.advance();
     }
+    
     fn identifier(&mut self) {
         while self
             .peek()
@@ -268,6 +269,7 @@ impl Scanner {
     }
 }
 
+// data you only need to build once, and can access it whenever, no runtime input needed
 static KEYWORD_MAP: LazyLock<HashMap<&'static str, TokenType>> = LazyLock::new(|| {
     let mut map = HashMap::new();
 
