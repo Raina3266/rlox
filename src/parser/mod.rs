@@ -85,6 +85,7 @@ enum Literal {
     String(String),
 }
 
+// Only this is right-associative
 #[derive(Debug, Clone)]
 enum UnaryOp {
     Minus,
