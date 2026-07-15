@@ -7,6 +7,7 @@ use std::{
 use crate::{error::{had_error, reset_error}, lexer::Scanner};
 
 mod lexer;
+mod parser;
 mod error;
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -51,4 +52,3 @@ fn run(line: &str) -> Result<(), Box<dyn Error>> {
     }
     Ok(())
 }
-
