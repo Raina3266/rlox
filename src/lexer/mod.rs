@@ -61,7 +61,7 @@ pub enum TokenType {
 }
 
 #[derive(Debug, Clone)]
-enum Literal {
+pub enum Literal {
     Bool(bool),
     Number(f64),
     String(String),
