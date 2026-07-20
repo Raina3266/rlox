@@ -121,20 +121,20 @@ impl Parser {
         Parser { tokens, current: 0 }
     }
 
-    fn parse(&mut self) -> Expr {
-        return self.expression();
+    pub fn parse(&mut self) -> Result<Expr, ()> {
+        self.expression()
     }
 
-    fn expression(&mut self) -> Expr {
+    fn expression(&mut self) -> Result<Expr, ()> {
         self.equality()
     }
 
-    fn equality(&mut self) -> Expr {
-        let mut lhs_expr = self.comparison();
+    fn equality(&mut self) -> Result<Expr, ()> {
+        let mut lhs_expr = self.comparison()?;
 
         while let Some(token) = self.try_consume([TokenType::BangEqual, TokenType::EqualEqual]) {
             let token_type = token.token_type;
-            let rhs_expr = self.comparison();
+            let rhs_expr = self.comparison()?;
 
             lhs_expr = Expr::Binary {
                 operator: match token_type {
@@ -147,11 +147,11 @@ impl Parser {
             };
         }
 
-        lhs_expr
+        Ok(lhs_expr)
     }
 
-    fn comparison(&mut self) -> Expr {
-        let mut lhs_expr = self.term();
+    fn comparison(&mut self) -> Result<Expr, ()> {
+        let mut lhs_expr = self.term()?;
 
         while let Some(token) = self.try_consume([
             TokenType::Greater,
@@ -160,7 +160,7 @@ impl Parser {
             TokenType::LessEqual,
         ]) {
             let token_type = token.token_type;
-            let rhs_expr = self.term();
+            let rhs_expr = self.term()?;
 
             lhs_expr = Expr::Binary {
                 operator: match token_type {
@@ -175,15 +175,15 @@ impl Parser {
             };
         }
 
-        lhs_expr
+        Ok(lhs_expr)
     }
 
-    fn term(&mut self) -> Expr {
-        let mut lhs_expr = self.factor();
+    fn term(&mut self) -> Result<Expr, ()> {
+        let mut lhs_expr = self.factor()?;
 
         while let Some(token) = self.try_consume([TokenType::Minus, TokenType::Plus]) {
             let token_type = token.token_type;
-            let rhs_expr = self.factor();
+            let rhs_expr = self.factor()?;
 
             lhs_expr = Expr::Binary {
                 operator: match token_type {
@@ -196,11 +196,11 @@ impl Parser {
             };
         }
 
-        lhs_expr
+        Ok(lhs_expr)
     }
 
-    fn factor(&mut self) -> Expr {
-        let mut lhs_expr = self.unary();
+    fn factor(&mut self) -> Result<Expr, ()> {
+        let mut lhs_expr = self.unary()?;
 
         while let Some(token) = self.try_consume([TokenType::Slash, TokenType::Star]) {
             let token_type = token.token_type;
@@ -217,53 +217,49 @@ impl Parser {
             };
         }
 
-        lhs_expr
+        Ok(lhs_expr)
     }
 
-    fn unary(&mut self) -> Expr {
+    fn unary(&mut self) -> Result<Expr,()> {
         if let Some(token) = self.try_consume([TokenType::Bang, TokenType::Minus]) {
-            let expr = Box::new(self.unary());
-            return Expr::Unary {
+            let expr = Box::new(self.unary()?);
+            return Ok(Expr::Unary {
                 operator: match token.token_type {
                     TokenType::Bang => UnaryOp::Bang,
                     TokenType::Minus => UnaryOp::Minus,
                     _ => unreachable!(),
                 },
                 expr,
-            };
+            });
         }
         self.primary()
     }
 
-    fn primary(&mut self) -> Expr {
-        if let Some(token) = self.try_consume([TokenType::False]) {
-            return Expr::Literal(ExprLiteral::False);
-        }
-
-        if let Some(token) = self.try_consume([TokenType::True]) {
-            return Expr::Literal(ExprLiteral::True);
-        }
-
-        if let Some(token) = self.try_consume([TokenType::Nil]) {
-            return Expr::Literal(ExprLiteral::Nil);
-        }
-
-        if let Some(token) = self.try_consume([TokenType::Number, TokenType::String]) {
+    fn primary(&mut self) -> Result<Expr, ()> {
+        if let Some(_) = self.try_consume([TokenType::False]) {
+            return Ok(Expr::Literal(ExprLiteral::False));
+        } else if let Some(_) = self.try_consume([TokenType::True]) {
+            return Ok(Expr::Literal(ExprLiteral::True));
+        } else if let Some(_) = self.try_consume([TokenType::Nil]) {
+            return Ok(Expr::Literal(ExprLiteral::Nil));
+        } else if let Some(token) = self.try_consume([TokenType::Number, TokenType::String]) {
             let literal = match &token.literal {
                 Some(lexer::Literal::Number(i)) => ExprLiteral::Number(*i),
                 Some(lexer::Literal::String(s)) => ExprLiteral::String(s.clone()),
                 _ => unreachable!(),
             };
-            return Expr::Literal(literal);
-        }
+            return Ok(Expr::Literal(literal));
+        } else {
+            if let Some(_) = self.try_consume([TokenType::LeftParen]) {
+                let expr = self.expression();
+                self.try_consume([TokenType::RightParen]).unwrap();
 
-        if let Some(_) = self.try_consume([TokenType::LeftParen]) {
-            let expr = self.expression();
-            self.try_consume([TokenType::RightParen]).unwrap();
-
-            return Expr::Grouping(Box::new(expr));
-            error(&self.peek().unwrap(), "Expect expression.".to_string());
+                return Ok(Expr::Grouping(Box::new(expr)));
+            } 
         }
+        
+        error(&self.peek().unwrap(), "Expect expression.".to_string());
+        Err(())
     }
 
     fn consume(&mut self, token: TokenType, message: String) -> Option<Token> {
