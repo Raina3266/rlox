@@ -4,11 +4,16 @@ use std::{
     path::Path,
 };
 
-use crate::{error::{had_error, reset_error}, lexer::Scanner, parser::Parser};
+use crate::{
+    error::{had_error, reset_error},
+    lexer::Scanner,
+    parser::Parser,
+};
 
+mod error;
+mod interpreter;
 mod lexer;
 mod parser;
-mod error;
 
 fn main() -> Result<(), Box<dyn Error>> {
     let mut args = std::env::args().skip(1);
@@ -47,10 +52,13 @@ fn run_prompt() -> Result<(), Box<dyn Error>> {
 fn run(line: &str) -> Result<(), Box<dyn Error>> {
     let mut scanner = Scanner::new(line);
     let tokens = scanner.scan_tokens();
-    let mut parse = Parser::new(tokens);
-    let expression = parse.parse()?;
-    for token in tokens {
-        println!("{token:?}");
+    let mut parser = Parser::new(tokens);
+    let expression = parser.parse();
+    if had_error() {
+        return Ok(());
+    }
+    if let Ok(expression) = expression {
+        println!("{}", expression.pretty_print());
     }
     Ok(())
 }

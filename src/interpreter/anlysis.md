@@ -1,0 +1,5 @@
+Any Lox value	-> An enum, e.g. LoxValue (or Value)
+nil	-> A unit variant, e.g. LoxValue::Nil (Rust has no universal null)
+Boolean	-> bool, wrapped as LoxValue::Boolean(bool)
+number -> f64, wrapped as LoxValue::Number(f64)
+string ->	String, wrapped as LoxValue::String(...)

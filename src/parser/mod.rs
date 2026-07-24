@@ -4,7 +4,7 @@ use crate::{
 };
 
 #[derive(Debug, Clone)]
-enum Expr {
+pub enum Expr {
     Literal(ExprLiteral),
     Unary {
         operator: UnaryOp,
@@ -19,7 +19,7 @@ enum Expr {
 }
 
 impl Expr {
-    fn pretty_print(&self) -> String {
+    pub fn pretty_print(&self) -> String {
         match self {
             Expr::Literal(ExprLiteral::True) => {
                 return String::from("true");
@@ -82,7 +82,7 @@ impl Expr {
 }
 
 #[derive(Debug, Clone)]
-enum ExprLiteral {
+pub enum ExprLiteral {
     True,
     False,
     Nil,
@@ -92,13 +92,13 @@ enum ExprLiteral {
 
 // Only this is right-associative
 #[derive(Debug, Clone)]
-enum UnaryOp {
+pub enum UnaryOp {
     Minus,
     Bang,
 }
 
 #[derive(Debug, Clone)]
-enum BinaryOp {
+pub enum BinaryOp {
     BangEqual,
     EqualEqual,
     Greater,
@@ -204,7 +204,7 @@ impl Parser {
 
         while let Some(token) = self.try_consume([TokenType::Slash, TokenType::Star]) {
             let token_type = token.token_type;
-            let rhs_expr = self.unary();
+            let rhs_expr = self.factor()?;
 
             lhs_expr = Expr::Binary {
                 operator: match token_type {
@@ -220,7 +220,7 @@ impl Parser {
         Ok(lhs_expr)
     }
 
-    fn unary(&mut self) -> Result<Expr,()> {
+    fn unary(&mut self) -> Result<Expr, ()> {
         if let Some(token) = self.try_consume([TokenType::Bang, TokenType::Minus]) {
             let expr = Box::new(self.unary()?);
             return Ok(Expr::Unary {
@@ -251,13 +251,13 @@ impl Parser {
             return Ok(Expr::Literal(literal));
         } else {
             if let Some(_) = self.try_consume([TokenType::LeftParen]) {
-                let expr = self.expression();
+                let expr = self.expression()?;
                 self.try_consume([TokenType::RightParen]).unwrap();
 
                 return Ok(Expr::Grouping(Box::new(expr)));
-            } 
+            }
         }
-        
+
         error(&self.peek().unwrap(), "Expect expression.".to_string());
         Err(())
     }
