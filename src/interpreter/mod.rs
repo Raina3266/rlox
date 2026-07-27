@@ -31,39 +31,91 @@ pub fn evaluate(expr: &Expr) -> Result<Value, String> {
         Expr::Unary { operator, expr } => {
             let right = evaluate(expr)?;
             match operator {
-                UnaryOp::Minus => match right {
-                    Value::Number(n) => Ok(Value::Number(-n)),
-                    _ => Err("Operand must be a number.".to_string()),
-                },
+                UnaryOp::Minus => {
+                    check_number_operand(operator, &right)?;
+                    let Value::Number(n) = right else {
+                        unreachable!()
+                    };
+                    Ok(Value::Number(-n))
+                }
                 UnaryOp::Bang => Ok(Value::Boolean(!right.is_truthy())),
             }
         }
         Expr::Binary { operator, lhs, rhs } => {
             let left = evaluate(lhs)?;
             let right = evaluate(rhs)?;
-            match (operator, left, right) {
-                (BinaryOp::EqualEqual, left, right) => Ok(Value::Boolean(left == right)),
-                (BinaryOp::BangEqual, left, right) => Ok(Value::Boolean(left != right)),
-                (BinaryOp::Plus, Value::Number(a), Value::Number(b)) => Ok(Value::Number(a + b)),
-                (BinaryOp::Plus, Value::String(a), Value::String(b)) => Ok(Value::String(a + &b)),
-                (BinaryOp::Plus, _, _) => {
-                    Err("Operands must be two numbers or two strings.".to_string())
+            match operator {
+                BinaryOp::EqualEqual => Ok(Value::Boolean(left == right)),
+                BinaryOp::BangEqual => Ok(Value::Boolean(left != right)),
+                BinaryOp::Plus => match (&left, &right) {
+                    (Value::Number(a), Value::Number(b)) => Ok(Value::Number(a + b)),
+                    (Value::String(a), Value::String(b)) => Ok(Value::String(a.clone() + b)),
+                    _ => Err("Operands must be two numbers or two strings.".to_string()),
+                },
+                BinaryOp::Minus => {
+                    check_number_operands(operator, &left, &right)?;
+                    let (Value::Number(a), Value::Number(b)) = (left, right) else {
+                        unreachable!()
+                    };
+                    Ok(Value::Number(a - b))
                 }
-                (BinaryOp::Minus, Value::Number(a), Value::Number(b)) => Ok(Value::Number(a - b)),
-                (BinaryOp::Star, Value::Number(a), Value::Number(b)) => Ok(Value::Number(a * b)),
-                (BinaryOp::Slash, Value::Number(a), Value::Number(b)) => Ok(Value::Number(a / b)),
-                (BinaryOp::Greater, Value::Number(a), Value::Number(b)) => {
+                BinaryOp::Slash => {
+                    check_number_operands(operator, &left, &right)?;
+                    let (Value::Number(a), Value::Number(b)) = (left, right) else {
+                        unreachable!()
+                    };
+                    Ok(Value::Number(a / b))
+                }
+                BinaryOp::Star => {
+                    check_number_operands(operator, &left, &right)?;
+                    let (Value::Number(a), Value::Number(b)) = (left, right) else {
+                        unreachable!()
+                    };
+                    Ok(Value::Number(a * b))
+                }
+                BinaryOp::Greater => {
+                    check_number_operands(operator, &left, &right)?;
+                    let (Value::Number(a), Value::Number(b)) = (left, right) else {
+                        unreachable!()
+                    };
                     Ok(Value::Boolean(a > b))
                 }
-                (BinaryOp::GreaterEqual, Value::Number(a), Value::Number(b)) => {
+                BinaryOp::GreaterEqual => {
+                    check_number_operands(operator, &left, &right)?;
+                    let (Value::Number(a), Value::Number(b)) = (left, right) else {
+                        unreachable!()
+                    };
                     Ok(Value::Boolean(a >= b))
                 }
-                (BinaryOp::Less, Value::Number(a), Value::Number(b)) => Ok(Value::Boolean(a < b)),
-                (BinaryOp::LessEqual, Value::Number(a), Value::Number(b)) => {
+                BinaryOp::Less => {
+                    check_number_operands(operator, &left, &right)?;
+                    let (Value::Number(a), Value::Number(b)) = (left, right) else {
+                        unreachable!()
+                    };
+                    Ok(Value::Boolean(a < b))
+                }
+                BinaryOp::LessEqual => {
+                    check_number_operands(operator, &left, &right)?;
+                    let (Value::Number(a), Value::Number(b)) = (left, right) else {
+                        unreachable!()
+                    };
                     Ok(Value::Boolean(a <= b))
                 }
-                _ => Err("Operands must be numbers.".to_string()),
             }
         }
     }
+}
+
+fn check_number_operand(_operator: &UnaryOp, operand: &Value) -> Result<(), String> {
+    if let Value::Number(_) = operand {
+        return Ok(());
+    }
+    Err("Operand must be a number.".to_string())
+}
+
+fn check_number_operands(_operator: &BinaryOp, left: &Value, right: &Value) -> Result<(), String> {
+    if let (Value::Number(_), Value::Number(_)) = (left, right) {
+        return Ok(());
+    }
+    Err("Operands must be numbers.".to_string())
 }
