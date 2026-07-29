@@ -37,28 +37,12 @@ impl Expr {
                 return str.clone();
             }
             Expr::Unary { operator, expr } => {
-                let op_str = match operator.token_type {
-                    TokenType::Minus => "-",
-                    TokenType::Bang => "!",
-                    _ => "Wrong operator for Unary Expression.",
-                };
+                let op_str = &operator.lexeme;
                 let expr = vec![&**expr];
                 return Expr::parenthesize(op_str.to_string(), expr);
             }
             Expr::Binary { operator, lhs, rhs } => {
-                let op_str = match operator.token_type {
-                    TokenType::BangEqual => "!=",
-                    TokenType::EqualEqual => "==",
-                    TokenType::Greater => ">",
-                    TokenType::GreaterEqual => ">=",
-                    TokenType::Less => "<",
-                    TokenType::LessEqual => "<=",
-                    TokenType::Minus => "-",
-                    TokenType::Plus => "+",
-                    TokenType::Slash => "/",
-                    TokenType::Star => "*",
-                    _ => "Wrong operator for Binary Expression.",
-                };
+                let op_str = &operator.lexeme;
                 let expr = vec![lhs.as_ref(), rhs.as_ref()];
                 return Expr::parenthesize(op_str.to_string(), expr);
             }

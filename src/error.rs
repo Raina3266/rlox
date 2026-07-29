@@ -1,9 +1,27 @@
 use std::sync::atomic::{AtomicBool, Ordering};
 
-use crate::interpreter::RuntimeError;
+use crate::lexer::Token;
 
 static HAD_ERROR: AtomicBool = AtomicBool::new(false);
 static HAD_RUNTIME_ERROR: AtomicBool = AtomicBool::new(false);
+
+#[derive(Debug)]
+pub enum RuntimeError {
+    Syntax(SyntaxError),
+    IO(std::io::Error),
+}
+
+#[derive(Debug)]
+pub struct SyntaxError {
+    pub token: Token,
+    pub message: String,
+}
+
+impl From<std::io::Error> for RuntimeError {
+    fn from(error: std::io::Error) -> Self {
+        RuntimeError::IO(error)
+    }
+}
 
 pub fn reset_error() {
     HAD_ERROR.store(false, Ordering::Relaxed);
@@ -30,7 +48,7 @@ pub fn report(line: usize, error: String, message: String) {
     HAD_ERROR.store(true, Ordering::Relaxed);
 }
 
-pub fn runtime_error(error: RuntimeError) {
+pub fn runtime_error(error: SyntaxError) {
     eprintln!("{}\n[line {}]", error.token.line, error.message);
     HAD_RUNTIME_ERROR.store(true, Ordering::Relaxed);
 }

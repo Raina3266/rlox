@@ -1,5 +1,5 @@
 use crate::{
-    error::runtime_error,
+    error::{SyntaxError, runtime_error},
     lexer::{Token, TokenType},
     parser::{Expr, ExprLiteral},
 };
@@ -22,10 +22,18 @@ impl Value {
     }
 }
 
-pub fn interpret(expr: &Expr) {
-    match evaluate(expr) {
-        Ok(value) => println!("{}", stringify(&value)),
-        Err(err) => runtime_error(err),
+pub struct Interpreter {}
+
+impl Interpreter {
+    pub fn new() -> Self {
+        Interpreter {}
+    }
+
+    pub fn interpret(&self, expr: &Expr) {
+        match evaluate(expr) {
+            Ok(value) => println!("{}", stringify(&value)),
+            Err(err) => runtime_error(err),
+        }
     }
 }
 
@@ -44,7 +52,7 @@ fn stringify(value: &Value) -> String {
     }
 }
 
-pub fn evaluate(expr: &Expr) -> Result<Value, RuntimeError> {
+pub fn evaluate(expr: &Expr) -> Result<Value, SyntaxError> {
     match expr {
         Expr::Literal(literal) => Ok(match literal {
             ExprLiteral::True => Value::Boolean(true),
@@ -62,7 +70,7 @@ pub fn evaluate(expr: &Expr) -> Result<Value, RuntimeError> {
                     Ok(Value::Number(-n))
                 }
                 TokenType::Bang => Ok(Value::Boolean(!right.is_truthy())),
-                _ => Err(RuntimeError {
+                _ => Err(SyntaxError {
                     token: operator.clone(),
                     message: "Unsupported unary operator.".to_string(),
                 }),
@@ -77,7 +85,7 @@ pub fn evaluate(expr: &Expr) -> Result<Value, RuntimeError> {
                 TokenType::Plus => match (&left, &right) {
                     (Value::Number(a), Value::Number(b)) => Ok(Value::Number(a + b)),
                     (Value::String(a), Value::String(b)) => Ok(Value::String(a.clone() + b)),
-                    _ => Err(RuntimeError {
+                    _ => Err(SyntaxError {
                         token: operator.clone(),
                         message: "Operands must be two numbers or two strings.".to_string(),
                     }),
@@ -110,7 +118,7 @@ pub fn evaluate(expr: &Expr) -> Result<Value, RuntimeError> {
                     let (a, b) = check_number_operands(operator, &left, &right)?;
                     Ok(Value::Boolean(a <= b))
                 }
-                _ => Err(RuntimeError {
+                _ => Err(SyntaxError {
                     token: operator.clone(),
                     message: "Unsupported binary operator.".to_string(),
                 }),
@@ -119,16 +127,11 @@ pub fn evaluate(expr: &Expr) -> Result<Value, RuntimeError> {
     }
 }
 
-pub struct RuntimeError {
-    pub token: Token,
-    pub message: String,
-}
-
-fn check_number_operand(operator: &Token, operand: &Value) -> Result<f64, RuntimeError> {
+fn check_number_operand(operator: &Token, operand: &Value) -> Result<f64, SyntaxError> {
     if let Value::Number(n) = operand {
         return Ok(*n);
     }
-    Err(RuntimeError {
+    Err(SyntaxError {
         token: operator.clone(),
         message: "Operand must be a number.".to_string(),
     })
@@ -138,11 +141,11 @@ fn check_number_operands(
     operator: &Token,
     left: &Value,
     right: &Value,
-) -> Result<(f64, f64), RuntimeError> {
+) -> Result<(f64, f64), SyntaxError> {
     if let (Value::Number(a), Value::Number(b)) = (left, right) {
         return Ok((*a, *b));
     }
-    Err(RuntimeError {
+    Err(SyntaxError {
         token: operator.clone(),
         message: "Operands must be numbers.".to_string(),
     })

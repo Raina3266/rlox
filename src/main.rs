@@ -1,12 +1,11 @@
 use std::{
-    error::Error,
     io::{BufRead, BufReader, Write, stdin, stdout},
     path::Path,
 };
 
 use crate::{
-    error::{had_error, had_runtime_error, reset_error, reset_runtime_error},
-    interpreter::interpret,
+    error::{RuntimeError, had_error, had_runtime_error, reset_error, reset_runtime_error},
+    interpreter::Interpreter,
     lexer::Scanner,
     parser::Parser,
 };
@@ -16,7 +15,7 @@ mod interpreter;
 mod lexer;
 mod parser;
 
-fn main() -> Result<(), Box<dyn Error>> {
+fn main() -> Result<(), RuntimeError> {
     let mut args = std::env::args().skip(1);
     if args.len() > 1 {
         eprintln!("Usage: rlox [SCRIPT]");
@@ -29,7 +28,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn run_file(path: &Path) -> Result<(), Box<dyn Error>> {
+fn run_file(path: &Path) -> Result<(), RuntimeError> {
     run(&std::fs::read_to_string(path)?)?;
     if had_error() {
         std::process::exit(65);
@@ -40,7 +39,7 @@ fn run_file(path: &Path) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn run_prompt() -> Result<(), Box<dyn Error>> {
+fn run_prompt() -> Result<(), RuntimeError> {
     let input = stdin();
     let mut input = BufReader::new(input);
     loop {
@@ -54,7 +53,7 @@ fn run_prompt() -> Result<(), Box<dyn Error>> {
     }
 }
 
-fn run(line: &str) -> Result<(), Box<dyn Error>> {
+fn run(line: &str) -> Result<(), RuntimeError> {
     let mut scanner = Scanner::new(line);
     let tokens = scanner.scan_tokens();
     let mut parser = Parser::new(tokens);
@@ -63,7 +62,8 @@ fn run(line: &str) -> Result<(), Box<dyn Error>> {
         return Ok(());
     }
     if let Ok(expression) = expression {
-        interpret(&expression);
+        let interpreter = Interpreter::new();
+        interpreter.interpret(&expression);
     }
     Ok(())
 }
