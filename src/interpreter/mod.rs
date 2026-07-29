@@ -1,5 +1,7 @@
 use crate::{
-    lexer::{Token, TokenType}, parser::{Expr, ExprLiteral},
+    error::runtime_error,
+    lexer::{Token, TokenType},
+    parser::{Expr, ExprLiteral},
 };
 
 #[derive(Debug, Clone, PartialEq)]
@@ -21,7 +23,10 @@ impl Value {
 }
 
 pub fn interpret(expr: &Expr) {
-    let value = evaluate(expr);
+    match evaluate(expr) {
+        Ok(value) => println!("{}", stringify(&value)),
+        Err(err) => runtime_error(err),
+    }
 }
 
 fn stringify(value: &Value) -> String {
@@ -53,76 +58,62 @@ pub fn evaluate(expr: &Expr) -> Result<Value, RuntimeError> {
             let right = evaluate(expr)?;
             match operator.token_type {
                 TokenType::Minus => {
-                    check_number_operand(operator, &right)?;
-                    let Value::Number(n) = right else {
-                        unreachable!()
-                    };
+                    let n = check_number_operand(operator, &right)?;
                     Ok(Value::Number(-n))
                 }
                 TokenType::Bang => Ok(Value::Boolean(!right.is_truthy())),
-                _ => 
+                _ => Err(RuntimeError {
+                    token: operator.clone(),
+                    message: "Unsupported unary operator.".to_string(),
+                }),
             }
         }
         Expr::Binary { operator, lhs, rhs } => {
             let left = evaluate(lhs)?;
             let right = evaluate(rhs)?;
-            match operator {
-                BinaryOp::EqualEqual => Ok(Value::Boolean(left == right)),
-                BinaryOp::BangEqual => Ok(Value::Boolean(left != right)),
-                BinaryOp::Plus => match (&left, &right) {
+            match operator.token_type {
+                TokenType::EqualEqual => Ok(Value::Boolean(left == right)),
+                TokenType::BangEqual => Ok(Value::Boolean(left != right)),
+                TokenType::Plus => match (&left, &right) {
                     (Value::Number(a), Value::Number(b)) => Ok(Value::Number(a + b)),
                     (Value::String(a), Value::String(b)) => Ok(Value::String(a.clone() + b)),
-                    _ => Err("Operands must be two numbers or two strings.".to_string()),
+                    _ => Err(RuntimeError {
+                        token: operator.clone(),
+                        message: "Operands must be two numbers or two strings.".to_string(),
+                    }),
                 },
-                BinaryOp::Minus => {
-                    check_number_operands(operator, &left, &right)?;
-                    let (Value::Number(a), Value::Number(b)) = (left, right) else {
-                        unreachable!()
-                    };
+                TokenType::Minus => {
+                    let (a, b) = check_number_operands(operator, &left, &right)?;
                     Ok(Value::Number(a - b))
                 }
-                BinaryOp::Slash => {
-                    check_number_operands(operator, &left, &right)?;
-                    let (Value::Number(a), Value::Number(b)) = (left, right) else {
-                        unreachable!()
-                    };
+                TokenType::Slash => {
+                    let (a, b) = check_number_operands(operator, &left, &right)?;
                     Ok(Value::Number(a / b))
                 }
-                BinaryOp::Star => {
-                    check_number_operands(operator, &left, &right)?;
-                    let (Value::Number(a), Value::Number(b)) = (left, right) else {
-                        unreachable!()
-                    };
+                TokenType::Star => {
+                    let (a, b) = check_number_operands(operator, &left, &right)?;
                     Ok(Value::Number(a * b))
                 }
-                BinaryOp::Greater => {
-                    check_number_operands(operator, &left, &right)?;
-                    let (Value::Number(a), Value::Number(b)) = (left, right) else {
-                        unreachable!()
-                    };
+                TokenType::Greater => {
+                    let (a, b) = check_number_operands(operator, &left, &right)?;
                     Ok(Value::Boolean(a > b))
                 }
-                BinaryOp::GreaterEqual => {
-                    check_number_operands(operator, &left, &right)?;
-                    let (Value::Number(a), Value::Number(b)) = (left, right) else {
-                        unreachable!()
-                    };
+                TokenType::GreaterEqual => {
+                    let (a, b) = check_number_operands(operator, &left, &right)?;
                     Ok(Value::Boolean(a >= b))
                 }
-                BinaryOp::Less => {
-                    check_number_operands(operator, &left, &right)?;
-                    let (Value::Number(a), Value::Number(b)) = (left, right) else {
-                        unreachable!()
-                    };
+                TokenType::Less => {
+                    let (a, b) = check_number_operands(operator, &left, &right)?;
                     Ok(Value::Boolean(a < b))
                 }
-                BinaryOp::LessEqual => {
-                    check_number_operands(operator, &left, &right)?;
-                    let (Value::Number(a), Value::Number(b)) = (left, right) else {
-                        unreachable!()
-                    };
+                TokenType::LessEqual => {
+                    let (a, b) = check_number_operands(operator, &left, &right)?;
                     Ok(Value::Boolean(a <= b))
                 }
+                _ => Err(RuntimeError {
+                    token: operator.clone(),
+                    message: "Unsupported binary operator.".to_string(),
+                }),
             }
         }
     }
@@ -133,10 +124,9 @@ pub struct RuntimeError {
     pub message: String,
 }
 
-
-fn check_number_operand(operator: &Token, operand: &Value) -> Result<(), RuntimeError> {
-    if let Value::Number(_) = operand {
-        return Ok(());
+fn check_number_operand(operator: &Token, operand: &Value) -> Result<f64, RuntimeError> {
+    if let Value::Number(n) = operand {
+        return Ok(*n);
     }
     Err(RuntimeError {
         token: operator.clone(),
@@ -144,9 +134,13 @@ fn check_number_operand(operator: &Token, operand: &Value) -> Result<(), Runtime
     })
 }
 
-fn check_number_operands(operator: &Token, left: &Value, right: &Value) -> Result<(), RuntimeError> {
-    if let (Value::Number(_), Value::Number(_)) = (left, right) {
-        return Ok(());
+fn check_number_operands(
+    operator: &Token,
+    left: &Value,
+    right: &Value,
+) -> Result<(f64, f64), RuntimeError> {
+    if let (Value::Number(a), Value::Number(b)) = (left, right) {
+        return Ok((*a, *b));
     }
     Err(RuntimeError {
         token: operator.clone(),

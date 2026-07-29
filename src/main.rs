@@ -5,7 +5,8 @@ use std::{
 };
 
 use crate::{
-    error::{had_error, reset_error},
+    error::{had_error, had_runtime_error, reset_error, reset_runtime_error},
+    interpreter::interpret,
     lexer::Scanner,
     parser::Parser,
 };
@@ -29,9 +30,12 @@ fn main() -> Result<(), Box<dyn Error>> {
 }
 
 fn run_file(path: &Path) -> Result<(), Box<dyn Error>> {
-    run(&std::fs::read_to_string(path)?);
+    run(&std::fs::read_to_string(path)?)?;
     if had_error() {
         std::process::exit(65);
+    }
+    if had_runtime_error() {
+        std::process::exit(70);
     }
     Ok(())
 }
@@ -46,6 +50,7 @@ fn run_prompt() -> Result<(), Box<dyn Error>> {
         input.read_line(&mut line).unwrap();
         run(&line)?;
         reset_error();
+        reset_runtime_error();
     }
 }
 
@@ -58,7 +63,7 @@ fn run(line: &str) -> Result<(), Box<dyn Error>> {
         return Ok(());
     }
     if let Ok(expression) = expression {
-        println!("{}", expression.pretty_print());
+        interpret(&expression);
     }
     Ok(())
 }
