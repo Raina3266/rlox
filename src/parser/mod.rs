@@ -7,11 +7,11 @@ use crate::{
 pub enum Expr {
     Literal(ExprLiteral),
     Unary {
-        operator: UnaryOp,
+        operator: Token,
         expr: Box<Self>,
     },
     Binary {
-        operator: BinaryOp,
+        operator: Token,
         lhs: Box<Self>,
         rhs: Box<Self>,
     },
@@ -37,25 +37,27 @@ impl Expr {
                 return str.clone();
             }
             Expr::Unary { operator, expr } => {
-                let op_str = match operator {
-                    UnaryOp::Minus => "-",
-                    UnaryOp::Bang => "!",
+                let op_str = match operator.token_type {
+                    TokenType::Minus => "-",
+                    TokenType::Bang => "!",
+                    _ => "Wrong operator for Unary Expression.",
                 };
                 let expr = vec![&**expr];
                 return Expr::parenthesize(op_str.to_string(), expr);
             }
             Expr::Binary { operator, lhs, rhs } => {
-                let op_str = match operator {
-                    BinaryOp::BangEqual => "!=",
-                    BinaryOp::EqualEqual => "==",
-                    BinaryOp::Greater => ">",
-                    BinaryOp::GreaterEqual => ">=",
-                    BinaryOp::Less => "<",
-                    BinaryOp::LessEqual => "<=",
-                    BinaryOp::Minus => "-",
-                    BinaryOp::Plus => "+",
-                    BinaryOp::Slash => "/",
-                    BinaryOp::Star => "*",
+                let op_str = match operator.token_type {
+                    TokenType::BangEqual => "!=",
+                    TokenType::EqualEqual => "==",
+                    TokenType::Greater => ">",
+                    TokenType::GreaterEqual => ">=",
+                    TokenType::Less => "<",
+                    TokenType::LessEqual => "<=",
+                    TokenType::Minus => "-",
+                    TokenType::Plus => "+",
+                    TokenType::Slash => "/",
+                    TokenType::Star => "*",
+                    _ => "Wrong operator for Binary Expression.",
                 };
                 let expr = vec![lhs.as_ref(), rhs.as_ref()];
                 return Expr::parenthesize(op_str.to_string(), expr);
@@ -90,27 +92,6 @@ pub enum ExprLiteral {
     String(String),
 }
 
-// Only this is right-associative
-#[derive(Debug, Clone)]
-pub enum UnaryOp {
-    Minus,
-    Bang,
-}
-
-#[derive(Debug, Clone)]
-pub enum BinaryOp {
-    BangEqual,
-    EqualEqual,
-    Greater,
-    GreaterEqual,
-    Less,
-    LessEqual,
-    Minus,
-    Plus,
-    Slash,
-    Star,
-}
-
 pub struct Parser {
     tokens: Vec<Token>,
     current: usize,
@@ -133,15 +114,10 @@ impl Parser {
         let mut lhs_expr = self.comparison()?;
 
         while let Some(token) = self.try_consume([TokenType::BangEqual, TokenType::EqualEqual]) {
-            let token_type = token.token_type;
             let rhs_expr = self.comparison()?;
 
             lhs_expr = Expr::Binary {
-                operator: match token_type {
-                    TokenType::BangEqual => BinaryOp::BangEqual,
-                    TokenType::EqualEqual => BinaryOp::EqualEqual,
-                    _ => unreachable!(),
-                },
+                operator: token,
                 lhs: Box::new(lhs_expr),
                 rhs: Box::new(rhs_expr),
             };
@@ -159,17 +135,10 @@ impl Parser {
             TokenType::Less,
             TokenType::LessEqual,
         ]) {
-            let token_type = token.token_type;
             let rhs_expr = self.term()?;
 
             lhs_expr = Expr::Binary {
-                operator: match token_type {
-                    TokenType::Greater => BinaryOp::Greater,
-                    TokenType::GreaterEqual => BinaryOp::GreaterEqual,
-                    TokenType::Less => BinaryOp::Less,
-                    TokenType::LessEqual => BinaryOp::LessEqual,
-                    _ => unreachable!(),
-                },
+                operator: token,
                 lhs: Box::new(lhs_expr),
                 rhs: Box::new(rhs_expr),
             };
@@ -182,15 +151,10 @@ impl Parser {
         let mut lhs_expr = self.factor()?;
 
         while let Some(token) = self.try_consume([TokenType::Minus, TokenType::Plus]) {
-            let token_type = token.token_type;
             let rhs_expr = self.factor()?;
 
             lhs_expr = Expr::Binary {
-                operator: match token_type {
-                    TokenType::Minus => BinaryOp::Minus,
-                    TokenType::Plus => BinaryOp::Plus,
-                    _ => unreachable!(),
-                },
+                operator: token,
                 lhs: Box::new(lhs_expr),
                 rhs: Box::new(rhs_expr),
             };
@@ -203,15 +167,10 @@ impl Parser {
         let mut lhs_expr = self.unary()?;
 
         while let Some(token) = self.try_consume([TokenType::Slash, TokenType::Star]) {
-            let token_type = token.token_type;
             let rhs_expr = self.factor()?;
 
             lhs_expr = Expr::Binary {
-                operator: match token_type {
-                    TokenType::Slash => BinaryOp::Slash,
-                    TokenType::Star => BinaryOp::Star,
-                    _ => unreachable!(),
-                },
+                operator: token,
                 lhs: Box::new(lhs_expr),
                 rhs: Box::new(rhs_expr),
             };
@@ -224,11 +183,7 @@ impl Parser {
         if let Some(token) = self.try_consume([TokenType::Bang, TokenType::Minus]) {
             let expr = Box::new(self.unary()?);
             return Ok(Expr::Unary {
-                operator: match token.token_type {
-                    TokenType::Bang => UnaryOp::Bang,
-                    TokenType::Minus => UnaryOp::Minus,
-                    _ => unreachable!(),
-                },
+                operator: token,
                 expr,
             });
         }
