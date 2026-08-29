@@ -150,3 +150,49 @@ fn check_number_operands(
         message: "Operands must be numbers.".to_string(),
     })
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::{lexer::Scanner, parser::Parser};
+
+    use super::*;
+
+    fn produce_expr(source: &str) -> Expr {
+        Parser::new(Scanner::new(source).scan_tokens())
+            .parse()
+            .unwrap()
+    }
+
+    #[test]
+    fn test_literal_number() {
+        let source = "123";
+        let result: Expr = Expr::Literal(ExprLiteral::Number(123.0));
+        let expr = produce_expr(source);
+        assert_eq!(expr, result);
+    }
+    #[test]
+    fn test_literal_string() {
+        let source = "\"hello world\"";
+        let result: Expr = Expr::Literal(ExprLiteral::String("hello world".to_string()));
+        let expr = produce_expr(source);
+        assert_eq!(expr, result);
+    }
+    #[test]
+    fn test_literal_bool() {
+        let source1 = "true";
+        let source2 = "false";
+        let result1: Expr = Expr::Literal(ExprLiteral::True);
+        let result2: Expr = Expr::Literal(ExprLiteral::False);
+        let expr1 = produce_expr(source1);
+        let expr2 = produce_expr(source2);
+        assert_eq!(expr1, result1);
+        assert_eq!(expr2, result2);
+    }
+    #[test]
+    fn test_literal_nil() {
+        let source = "nil";
+        let result: Expr = Expr::Literal(ExprLiteral::Nil);
+        let expr = produce_expr(source);
+        assert_eq!(expr, result);
+    }
+}

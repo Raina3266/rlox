@@ -3,7 +3,7 @@ use crate::{
     lexer::{self, Token, TokenType},
 };
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Expr {
     Literal(ExprLiteral),
     Unary {
@@ -67,7 +67,7 @@ impl Expr {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum ExprLiteral {
     True,
     False,
@@ -76,6 +76,7 @@ pub enum ExprLiteral {
     String(String),
 }
 
+#[derive(Debug)]
 pub struct Parser {
     tokens: Vec<Token>,
     current: usize,

@@ -2,7 +2,7 @@ use std::{collections::HashMap, sync::LazyLock};
 
 use crate::error::error;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Token {
     pub token_type: TokenType,
     pub lexeme: String,
@@ -60,7 +60,7 @@ pub enum TokenType {
     Eof,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Literal {
     Bool(bool),
     Number(f64),
@@ -178,13 +178,13 @@ impl Scanner {
     }
 
     fn is_at_end(&self) -> bool {
-        self.current > self.source.len()
+        self.current >= self.source.len()
     }
 
+    /// Panics if `!self.is_at_end()`
     fn advance(&mut self) -> char {
-        let c = self.source[self.current];
         self.current += 1;
-        c
+        self.source[self.current - 1]
     }
 
     fn advance_if_equal(&mut self, expected: char) -> bool {
@@ -227,7 +227,6 @@ impl Scanner {
         }
         let value: String = self.source[self.start + 1..self.current].iter().collect();
         self.add_token_with_literal(TokenType::String, Some(Literal::String(value)));
-        self.advance();
     }
 
     fn number(&mut self) {
@@ -249,14 +248,10 @@ impl Scanner {
             return;
         };
         self.add_token_with_literal(TokenType::Number, Some(Literal::Number(number)));
-        self.advance();
     }
-    
+
     fn identifier(&mut self) {
-        while self
-            .peek()
-            .is_some_and(|c| c.is_ascii() && c.is_ascii_digit())
-        {
+        while self.peek().is_some_and(Self::is_valid_ident_char) {
             self.advance();
         }
 
@@ -266,6 +261,10 @@ impl Scanner {
         } else {
             self.add_token_with_literal(TokenType::Identifier, None);
         }
+    }
+
+    fn is_valid_ident_char(c: char) -> bool {
+        c.is_ascii_alphanumeric() || c == '_'
     }
 }
 
