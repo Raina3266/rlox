@@ -142,7 +142,6 @@ impl Scanner {
             }
             '=' => {
                 if self.advance_if_equal('=') {
-                
                     self.add_token(TokenType::EqualEqual)
                 } else {
                     self.add_token(TokenType::Equal);
@@ -151,14 +150,16 @@ impl Scanner {
             '<' => {
                 if self.advance_if_equal('=') {
                     self.add_token(TokenType::LessEqual)
+                } else {
+                    self.add_token(TokenType::Less);
                 }
-                self.add_token(TokenType::Less);
             }
             '>' => {
                 if self.advance_if_equal('=') {
                     self.add_token(TokenType::GreaterEqual)
+                } else {
+                    self.add_token(TokenType::Greater);
                 }
-                self.add_token(TokenType::Greater);
             }
             '/' => {
                 if self.advance_if_equal('/') {
