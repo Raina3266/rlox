@@ -10,6 +10,25 @@ pub struct Token {
     pub line: usize,
 }
 
+impl Token {
+    fn new(token_type: TokenType, lexeme: String, literal: Option<Literal>, line: usize) -> Self {
+        Token {
+            token_type,
+            lexeme,
+            literal,
+            line,
+        }
+    }
+    fn eof(line: usize) -> Self {
+        Token {
+            token_type: TokenType::Eof,
+            lexeme: "".to_string(),
+            literal: None,
+            line,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum TokenType {
     // Single-char
@@ -117,14 +136,17 @@ impl Scanner {
             '!' => {
                 if self.advance_if_equal('=') {
                     self.add_token(TokenType::BangEqual)
+                } else {
+                    self.add_token(TokenType::Bang);
                 }
-                self.add_token(TokenType::Bang);
             }
             '=' => {
                 if self.advance_if_equal('=') {
+                
                     self.add_token(TokenType::EqualEqual)
+                } else {
+                    self.add_token(TokenType::Equal);
                 }
-                self.add_token(TokenType::Equal);
             }
             '<' => {
                 if self.advance_if_equal('=') {
@@ -225,7 +247,10 @@ impl Scanner {
             error(self.line, "Unterminated string.".to_string());
             return;
         }
-        let value: String = self.source[self.start + 1..self.current].iter().collect();
+        self.advance();
+        let value: String = self.source[self.start + 1..self.current - 1]
+            .iter()
+            .collect();
         self.add_token_with_literal(TokenType::String, Some(Literal::String(value)));
     }
 
@@ -290,3 +315,73 @@ static KEYWORD_MAP: LazyLock<HashMap<&'static str, TokenType>> = LazyLock::new(|
     map.insert("while", TokenType::While);
     map
 });
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_lexing_string_1() {
+        let source = "\"hello\"";
+        let mut scanner = Scanner::new(source);
+        let tokens = scanner.scan_tokens();
+
+        let token1 = Token::new(
+            TokenType::String,
+            "\"hello\"".to_string(),
+            Some(Literal::String("hello".to_string())),
+            1,
+        );
+        let result: Vec<Token> = vec![token1, Token::eof(1)];
+
+        assert_eq!(tokens, result)
+    }
+
+    #[test]
+    fn test_lexing_string() {
+        let source = "\"hello \"+\"world\"";
+        let mut scanner = Scanner::new(source);
+        let tokens = scanner.scan_tokens();
+
+        let token1 = Token::new(
+            TokenType::String,
+            "\"hello \"".to_string(),
+            Some(Literal::String("hello ".to_string())),
+            1,
+        );
+        let token2 = Token::new(TokenType::Plus, "+".to_string(), None, 1);
+        let token3 = Token::new(
+            TokenType::String,
+            "\"world\"".to_string(),
+            Some(Literal::String("world".to_string())),
+            1,
+        );
+        let result: Vec<Token> = vec![token1, token2, token3, Token::eof(1)];
+
+        assert_eq!(tokens, result)
+    }
+
+    #[test]
+    fn test_lexing_binary_expression() {
+        let source = "5==5";
+        let mut scanner = Scanner::new(source);
+        let tokens = scanner.scan_tokens();
+
+        let token1 = Token::new(
+            TokenType::Number,
+            "5".to_string(),
+            Some(Literal::Number(5.0)),
+            1,
+        );
+        let token2 = Token::new(TokenType::EqualEqual, "==".to_string(), None, 1);
+        let token3 = Token::new(
+            TokenType::Number,
+            "5".to_string(),
+            Some(Literal::Number(5.0)),
+            1,
+        );
+        let result: Vec<Token> = vec![token1, token2, token3, Token::eof(1)];
+
+        assert_eq!(tokens, result)
+    }
+}

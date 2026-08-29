@@ -134,10 +134,8 @@ impl Parser {
 
     fn term(&mut self) -> Result<Expr, ()> {
         let mut lhs_expr = self.factor()?;
-
         while let Some(token) = self.try_consume([TokenType::Minus, TokenType::Plus]) {
             let rhs_expr = self.factor()?;
-
             lhs_expr = Expr::Binary {
                 operator: token,
                 lhs: Box::new(lhs_expr),

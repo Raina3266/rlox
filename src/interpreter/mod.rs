@@ -157,42 +157,101 @@ mod tests {
 
     use super::*;
 
-    fn produce_expr(source: &str) -> Expr {
-        Parser::new(Scanner::new(source).scan_tokens())
-            .parse()
-            .unwrap()
+    fn produce_value(source: &str) -> Value {
+        evaluate(
+            &Parser::new(Scanner::new(source).scan_tokens())
+                .parse()
+                .unwrap(),
+        )
+        .unwrap()
     }
 
     #[test]
     fn test_literal_number() {
         let source = "123";
-        let result: Expr = Expr::Literal(ExprLiteral::Number(123.0));
-        let expr = produce_expr(source);
-        assert_eq!(expr, result);
+        let result: Value = Value::Number(123.0);
+        let value = produce_value(source);
+        assert_eq!(value, result);
     }
     #[test]
     fn test_literal_string() {
         let source = "\"hello world\"";
-        let result: Expr = Expr::Literal(ExprLiteral::String("hello world".to_string()));
-        let expr = produce_expr(source);
-        assert_eq!(expr, result);
+        let result: Value = Value::String("hello world".to_string());
+        let value = produce_value(source);
+        assert_eq!(value, result);
     }
     #[test]
     fn test_literal_bool() {
         let source1 = "true";
         let source2 = "false";
-        let result1: Expr = Expr::Literal(ExprLiteral::True);
-        let result2: Expr = Expr::Literal(ExprLiteral::False);
-        let expr1 = produce_expr(source1);
-        let expr2 = produce_expr(source2);
-        assert_eq!(expr1, result1);
-        assert_eq!(expr2, result2);
+        let result1: Value = Value::Boolean(true);
+        let result2: Value = Value::Boolean(false);
+        let value1 = produce_value(source1);
+        let value2 = produce_value(source2);
+        assert_eq!(value1, result1);
+        assert_eq!(value2, result2);
     }
     #[test]
     fn test_literal_nil() {
         let source = "nil";
-        let result: Expr = Expr::Literal(ExprLiteral::Nil);
-        let expr = produce_expr(source);
-        assert_eq!(expr, result);
+        let result: Value = Value::Nil;
+        let value = produce_value(source);
+        assert_eq!(value, result);
+    }
+    #[test]
+    fn test_unary_1() {
+        let source = "!true";
+        let result: Value = Value::Boolean(false);
+        let value = produce_value(source);
+        assert_eq!(value, result);
+    }
+    #[test]
+    fn test_unary_2() {
+        let source = "-5";
+        let result: Value = Value::Number(-5.0);
+        let value = produce_value(source);
+        assert_eq!(value, result);
+    }
+    #[test]
+    fn test_binary_1() {
+        let source = "5 == 5";
+        let result: Value = Value::Boolean(true);
+        let value = produce_value(source);
+        assert_eq!(value, result);
+    }
+    #[test]
+    fn test_binary_2() {
+        let source = "5 != 5";
+        let result: Value = Value::Boolean(false);
+        let value = produce_value(source);
+        assert_eq!(value, result);
+    }
+    #[test]
+    fn test_binary_3() {
+        let source = "9.1 + 123.5";
+        let result: Value = Value::Number(132.6);
+        let value = produce_value(source);
+        assert_eq!(value, result);
+    }
+    #[test]
+    fn test_binary_4() {
+        let source = "\"hello \"+\"world\"";
+        let result: Value = Value::String("hello world".to_string());
+        let value = produce_value(source);
+        assert_eq!(value, result);
+    }
+    #[test]
+    fn test_binary_5() {
+        let source = "5.0 - 11.0";
+        let result: Value = Value::Number(-6.0);
+        let value = produce_value(source);
+        assert_eq!(value, result);
+    }
+    #[test]
+    fn test_grouping() {
+        let source = "3 * (5.0 - 1.0)";
+        let result: Value = Value::Number(12.0);
+        let value = produce_value(source);
+        assert_eq!(value, result);
     }
 }
