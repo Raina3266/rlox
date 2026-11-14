@@ -153,8 +153,8 @@ fn check_number_operands(
 
 #[cfg(test)]
 mod tests {
-    use crate::{lexer::Scanner, parser::Parser};
     use super::*;
+    use crate::{lexer::Scanner, parser::Parser};
 
     fn produce_value(source: &str) -> Value {
         evaluate(
@@ -165,12 +165,19 @@ mod tests {
         .unwrap()
     }
 
+    fn approx_eq(left: Value, right: Value) -> bool {
+        match (left, right) {
+            (Value::Number(a), Value::Number(b)) => (a - b).abs() < 1e-10,
+            _ => false,
+        }
+    }
+
     #[test]
     fn test_literal_number() {
         let source = "123";
         let result: Value = Value::Number(123.0);
         let value = produce_value(source);
-        assert_eq!(value, result);
+        assert!(approx_eq(value, result));
     }
     #[test]
     fn test_literal_string() {
@@ -209,7 +216,7 @@ mod tests {
         let source = "-5";
         let result: Value = Value::Number(-5.0);
         let value = produce_value(source);
-        assert_eq!(value, result);
+        assert!(approx_eq(value, result));
     }
     #[test]
     fn test_binary_1() {
@@ -230,7 +237,7 @@ mod tests {
         let source = "9.1 + 123.5";
         let result: Value = Value::Number(132.6);
         let value = produce_value(source);
-        assert_eq!(value, result);
+        assert!(approx_eq(value, result));
     }
     #[test]
     fn test_binary_4() {
@@ -244,7 +251,7 @@ mod tests {
         let source = "5.0 - 11.0";
         let result: Value = Value::Number(-6.0);
         let value = produce_value(source);
-        assert_eq!(value, result);
+        assert!(approx_eq(value, result));
     }
     #[test]
     fn test_binary_6() {
@@ -265,13 +272,20 @@ mod tests {
         let source = "3 * (5.0 - 1.0)";
         let result: Value = Value::Number(12.0);
         let value = produce_value(source);
-        assert_eq!(value, result);
+        assert!(approx_eq(value, result));
     }
     #[test]
     fn test_grouping_2() {
         let source = "8 / (5.0 - 1.0)";
         let result: Value = Value::Number(2.0);
         let value = produce_value(source);
-        assert_eq!(value, result);
+        assert!(approx_eq(value, result));
+    }
+    #[test]
+    fn test_grouping_3() {
+        let source = "5.0 - (8.0 - (5.5 - 1.2))";
+        let result: Value = Value::Number(1.3);
+        let value = produce_value(source);
+        assert!(approx_eq(value, result));
     }
 }
