@@ -154,7 +154,6 @@ fn check_number_operands(
 #[cfg(test)]
 mod tests {
     use crate::{lexer::Scanner, parser::Parser};
-
     use super::*;
 
     fn produce_value(source: &str) -> Value {
@@ -248,9 +247,30 @@ mod tests {
         assert_eq!(value, result);
     }
     #[test]
-    fn test_grouping() {
+    fn test_binary_6() {
+        let source = "7.0 * 1.8 < 3.0 / 1.5";
+        let result: Value = Value::Boolean(false);
+        let value = produce_value(source);
+        assert_eq!(value, result);
+    }
+    #[test]
+    fn test_binary_7() {
+        let source = "5.0 - 11.0 <= 2.0 * 3.0";
+        let result: Value = Value::Boolean(true);
+        let value = produce_value(source);
+        assert_eq!(value, result);
+    }
+    #[test]
+    fn test_grouping_1() {
         let source = "3 * (5.0 - 1.0)";
         let result: Value = Value::Number(12.0);
+        let value = produce_value(source);
+        assert_eq!(value, result);
+    }
+    #[test]
+    fn test_grouping_2() {
+        let source = "8 / (5.0 - 1.0)";
+        let result: Value = Value::Number(2.0);
         let value = produce_value(source);
         assert_eq!(value, result);
     }
